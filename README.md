@@ -11,7 +11,7 @@ This guide demonstrates how to deploy a Model Context Protocol (MCP) server to A
 ## Project Structure
 
 ```
-your-project/
+bedrock_agentcore_iam_runtime_mcp_server/
 ├── my_iam_mcp_server.py    # MCP server implementation
 ├── requirements.txt        # Python dependencies
 ├── test_mcp_client.py     # Test client
@@ -19,15 +19,9 @@ your-project/
 └── README.md              # This file
 ```
 
-**Note**: If you're cloning this repository, you can skip to Step 4 as the files are already created.
+**Note**: If you're cloning this repository, you can skip to Step 3 as the files are already created.
 
-## Step 1: Install Required Packages
-
-```bash
-pip install mcp boto3 bedrock-agentcore bedrock-agentcore-starter-toolkit run-mcp-servers-with-aws-lambda
-```
-
-## Step 2: Create Your MCP Server
+## Step 1: Create Your MCP Server
 
 Create `my_iam_mcp_server.py`:
 
@@ -55,7 +49,7 @@ if __name__ == "__main__":
     mcp.run(transport="streamable-http")
 ```
 
-## Step 3: Create Requirements File
+## Step 2: Create Requirements File
 
 Create `requirements.txt`:
 
@@ -67,7 +61,7 @@ bedrock-agentcore-starter-toolkit
 run-mcp-servers-with-aws-lambda
 ```
 
-## Step 4: Configure and Deploy
+## Step 3: Configure and Deploy
 
 Configure your MCP server:
 
@@ -92,7 +86,7 @@ After successful deployment, you'll receive an Agent ARN like:
 arn:aws:bedrock-agentcore:<aws-region>:<account-id>:runtime/my_iam_mcp_server-<random-id>
 ```
 
-## Step 5: Test with Your Current Credentials
+## Step 4: Test with Your Current Credentials
 
 Create `test_mcp_client.py`:
 
@@ -156,7 +150,7 @@ Test with your current credentials:
 python3 test_mcp_client.py
 ```
 
-## Step 6: Create Separate IAM User for Testing
+## Step 5: Create Separate IAM User for Testing
 
 ### Create IAM User
 
