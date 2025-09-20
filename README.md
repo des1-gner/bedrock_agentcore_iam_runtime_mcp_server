@@ -86,6 +86,8 @@ After successful deployment, you'll receive an Agent ARN like:
 arn:aws:bedrock-agentcore:<aws-region>:<account-id>:runtime/my_iam_mcp_server-<random-id>
 ```
 
+**Save this ARN - you'll need it in the next step.**
+
 ## Step 4: Test with Your Current Credentials
 
 Create `test_mcp_client.py`:
@@ -144,6 +146,11 @@ if __name__ == "__main__":
     asyncio.run(test_mcp_server())
 ```
 
+**Before running, update the following placeholders in `test_mcp_client.py`:**
+- Replace `<aws-region>` with your AWS region (e.g., `us-east-1`)
+- Replace `<account-id>` with your AWS account ID
+- Replace `<random-id>` with the random ID from your Agent ARN
+
 Test with your current credentials:
 
 ```bash
@@ -190,6 +197,10 @@ Create `mcp-access-policy.json`:
 }
 ```
 
+**Before creating the policy, update the following placeholders in `mcp-access-policy.json`:**
+- Replace `<aws-region>` with your AWS region (e.g., `us-east-1`)
+- Replace `<account-id>` with your AWS account ID
+
 Create and attach the policy:
 
 ```bash
@@ -198,15 +209,17 @@ aws iam create-policy \
     --policy-name MCPServerAccessPolicy \
     --policy-document file://mcp-access-policy.json
 
-# Attach the policy to the user
+# Attach the policy to the user (replace <account-id> with your AWS account ID)
 aws iam attach-user-policy \
     --user-name mcp-test-user \
     --policy-arn arn:aws:iam::<account-id>:policy/MCPServerAccessPolicy
 ```
 
+**Before running the attach command, replace `<account-id>` with your AWS account ID.**
+
 ### Test with New IAM User
 
-Set environment variables with the new user's credentials:
+Open a new terminal to not use your Admin Credentials and set your environment variables with the new user's credentials:
 
 ```bash
 export AWS_ACCESS_KEY_ID="<access-key-id>"
@@ -216,6 +229,11 @@ export AWS_DEFAULT_REGION="<aws-region>"
 # Run the test
 python3 test_mcp_client.py
 ```
+
+**Before running, replace the following:**
+- `<access-key-id>` with the AccessKeyId from the create-access-key command
+- `<secret-access-key>` with the SecretAccessKey from the create-access-key command
+- `<aws-region>` with your AWS region (e.g., `us-east-1`)
 
 ## Expected Output
 
@@ -241,3 +259,8 @@ greet_user('Alice') = [TextContent(type='text', text='Hello, Alice! Nice to meet
 
 - No OAuth/Cognito setup required - Uses standard AWS IAM authentication
 - SigV4 signing - Automatic AWS request signing with boto3 credentials
+
+## References
+
+- [AWS Bedrock AgentCore MCP Documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-mcp.html)
+- [AWS Bedrock AgentCore MCP Server Tutorial](https://github.com/awslabs/amazon-bedrock-agentcore-samples/blob/main/01-tutorials/01-AgentCore-runtime/02-hosting-MCP-server/hosting_mcp_server.ipynb)
