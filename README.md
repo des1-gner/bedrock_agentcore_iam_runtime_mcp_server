@@ -12,23 +12,28 @@ This guide demonstrates how to deploy a Model Context Protocol (MCP) server to A
 
 ```
 bedrock_agentcore_iam_runtime_mcp_server/
-├── my_iam_mcp_server.py    # MCP server implementation
-├── requirements.txt        # Python dependencies
-├── test_mcp_client.py     # Test client
-├── mcp-access-policy.json # IAM policy for MCP access
-└── README.md              # This file
+├── server/
+│   ├── my_iam_mcp_server.py    # MCP server implementation
+│   └── requirements.txt        # Server dependencies
+├── client/
+│   ├── test_mcp_client.py     # Test client
+│   └── requirements.txt        # Client dependencies
+├── iam/
+│   └── mcp-access-policy.json # IAM policy for MCP access
+└── README.md                  # This file
 ```
 
-**Note**: If you're cloning this repository, you can skip to Step 3 as the files are already created.
+**Note**: If you're cloning this repository, you can skip to Step 3 (as well as a few later ones) as the files are already created.
 
 ## Step 1: Create Your MCP Server
 
-Create `my_iam_mcp_server.py`:
+Create `server/my_iam_mcp_server.py`:
 
 ```python
 from mcp.server.fastmcp import FastMCP
+import boto3
 
-mcp = FastMCP(host="0.0.0.0", stateless_http=True)
+mcp = FastMCP("my_iam_mcp_server", host="0.0.0.0", stateless_http=True)
 
 @mcp.tool()
 def add_numbers(a: int, b: int) -> int:
@@ -45,27 +50,41 @@ def greet_user(name: str) -> str:
     """Greet a user by name"""
     return f"Hello, {name}! Nice to meet you."
 
+@mcp.tool()
+def get_aws_region() -> str:
+    """Get the current AWS region using boto3"""
+    session = boto3.Session()
+    return session.region_name
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
 ```
 
-## Step 2: Create Requirements File
+## Step 2: Create Requirements Files
 
-Create `requirements.txt`:
+Create `server/requirements.txt`:
 
 ```
 mcp
 boto3
 bedrock-agentcore
 bedrock-agentcore-starter-toolkit
+```
+
+Create `client/requirements.txt`:
+
+```
+mcp
+boto3
 run-mcp-servers-with-aws-lambda
 ```
 
 ## Step 3: Configure and Deploy
 
-Configure your MCP server:
+Navigate to the server directory and configure your MCP server:
 
 ```bash
+cd server
 agentcore configure -e my_iam_mcp_server.py --protocol MCP
 ```
 
@@ -90,7 +109,14 @@ arn:aws:bedrock-agentcore:<aws-region>:<account-id>:runtime/my_iam_mcp_server-<r
 
 ## Step 4: Test with Your Current Credentials
 
-Create `test_mcp_client.py`:
+Navigate to the client directory and install dependencies:
+
+```bash
+cd ../client
+pip install -r requirements.txt
+```
+
+Create `client/test_mcp_client.py`:
 
 ```python
 import boto3
@@ -111,36 +137,48 @@ async def test_mcp_server():
 
     session = boto3.Session()
     credentials = session.get_credentials()
-
-    async with streamablehttp_client_with_sigv4(
-        url=mcp_url,
-        service="bedrock-agentcore",
-        region="<aws-region>",
-        credentials=credentials,
-        timeout=120,
-        terminate_on_close=False
-    ) as (read_stream, write_stream, _):
-        async with ClientSession(read_stream, write_stream) as mcp_session:
-            await mcp_session.initialize()
-            
-            # List available tools
-            print("\n=== Available Tools ===")
-            tool_result = await mcp_session.list_tools()
-            for tool in tool_result.tools:
-                print(f"  - {tool.name}: {tool.description}")
-            
-            # Test the tools
-            print("\n=== Testing add_numbers tool ===")
-            result = await mcp_session.call_tool("add_numbers", {"a": 5, "b": 3})
-            print(f"add_numbers(5, 3) = {result.content}")
-            
-            print("\n=== Testing multiply_numbers tool ===")
-            result = await mcp_session.call_tool("multiply_numbers", {"a": 4, "b": 7})
-            print(f"multiply_numbers(4, 7) = {result.content}")
-            
-            print("\n=== Testing greet_user tool ===")
-            result = await mcp_session.call_tool("greet_user", {"name": "Alice"})
-            print(f"greet_user('Alice') = {result.content}")
+    
+    try:
+        async with streamablehttp_client_with_sigv4(
+            url=mcp_url,
+            service="bedrock-agentcore",
+            region="<aws-region>",
+            credentials=credentials,
+            timeout=120,
+            terminate_on_close=False
+        ) as (read_stream, write_stream, _):
+            async with ClientSession(read_stream, write_stream) as mcp_session:
+                print("Initializing MCP session...")
+                await mcp_session.initialize()
+                print("MCP session initialized successfully")
+                
+                # List available tools
+                print("\n=== Available Tools ===")
+                tool_result = await mcp_session.list_tools()
+                for tool in tool_result.tools:
+                    print(f"  - {tool.name}: {tool.description}")
+                
+                # Test the tools
+                print("\n=== Testing add_numbers tool ===")
+                result = await mcp_session.call_tool("add_numbers", {"a": 5, "b": 3})
+                print(f"add_numbers(5, 3) = {result.content}")
+                
+                print("\n=== Testing multiply_numbers tool ===")
+                result = await mcp_session.call_tool("multiply_numbers", {"a": 4, "b": 7})
+                print(f"multiply_numbers(4, 7) = {result.content}")
+                
+                print("\n=== Testing greet_user tool ===")
+                result = await mcp_session.call_tool("greet_user", {"name": "Alice"})
+                print(f"greet_user('Alice') = {result.content}")
+                
+                # Test the boto3 tool
+                print("\n=== Testing get_aws_region tool (uses boto3) ===")
+                result = await mcp_session.call_tool("get_aws_region", {})
+                print(f"get_aws_region() = {result.content}")
+                
+    except Exception as e:
+        print(f"Error connecting to MCP server {e}")
+        raise
 
 if __name__ == "__main__":
     asyncio.run(test_mcp_server())
@@ -173,7 +211,7 @@ Save the `AccessKeyId` and `SecretAccessKey` from the output.
 
 ### Create IAM Policy
 
-Create `mcp-access-policy.json`:
+Create `iam/mcp-access-policy.json`:
 
 ```json
 {
@@ -207,7 +245,7 @@ Create and attach the policy:
 # Create the policy
 aws iam create-policy \
     --policy-name MCPServerAccessPolicy \
-    --policy-document file://mcp-access-policy.json
+    --policy-document file://iam/mcp-access-policy.json
 
 # Attach the policy to the user (replace <account-id> with your AWS account ID)
 aws iam attach-user-policy \
@@ -240,10 +278,14 @@ python3 test_mcp_client.py
 ```
 Connecting to: https://bedrock-agentcore.<aws-region>.amazonaws.com/runtimes/arn%3Aaws%3Abedrock-agentcore%3A<aws-region>%3A<account-id>%3Aruntime%2Fmy_iam_mcp_server-<random-id>/invocations?qualifier=DEFAULT
 
+Initializing MCP session...
+MCP session initialized successfully
+
 === Available Tools ===
   - add_numbers: Add two numbers together
   - multiply_numbers: Multiply two numbers together
   - greet_user: Greet a user by name
+  - get_aws_region: Get the current AWS region using boto3
 
 === Testing add_numbers tool ===
 add_numbers(5, 3) = [TextContent(type='text', text='8', annotations=None, meta=None)]
@@ -253,12 +295,17 @@ multiply_numbers(4, 7) = [TextContent(type='text', text='28', annotations=None, 
 
 === Testing greet_user tool ===
 greet_user('Alice') = [TextContent(type='text', text='Hello, Alice! Nice to meet you.', annotations=None, meta=None)]
+
+=== Testing get_aws_region tool (uses boto3) ===
+get_aws_region() = [TextContent(type='text', text='us-east-1', annotations=None, meta=None)]
 ```
 
 ## Key Benefits
 
-- No OAuth/Cognito setup required - Uses standard AWS IAM authentication
-- SigV4 signing - Automatic AWS request signing with boto3 credentials
+- **No OAuth/Cognito setup required** - Uses standard AWS IAM authentication
+- **SigV4 signing** - Automatic AWS request signing with boto3 credentials
+- **Separated dependencies** - Server and client dependencies are isolated
+- **boto3 support** - Demonstrates using AWS SDK within MCP server tools
 
 ## References
 

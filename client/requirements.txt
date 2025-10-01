@@ -1,0 +1,3 @@
+mcp
+boto3
+run-mcp-servers-with-aws-lambda

@@ -1,6 +1,7 @@
 from mcp.server.fastmcp import FastMCP
+import boto3
 
-mcp = FastMCP(host="0.0.0.0", stateless_http=True)
+mcp = FastMCP("my_iam_mcp_server", host="0.0.0.0", stateless_http=True)
 
 @mcp.tool()
 def add_numbers(a: int, b: int) -> int:
@@ -16,6 +17,12 @@ def multiply_numbers(a: int, b: int) -> int:
 def greet_user(name: str) -> str:
     """Greet a user by name"""
     return f"Hello, {name}! Nice to meet you."
+
+@mcp.tool()
+def get_aws_region() -> str:
+    """Get the current AWS region using boto3"""
+    session = boto3.Session()
+    return session.region_name or "us-east-1"
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
