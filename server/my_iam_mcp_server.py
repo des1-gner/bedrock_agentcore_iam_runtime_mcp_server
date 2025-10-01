@@ -22,7 +22,7 @@ def greet_user(name: str) -> str:
 def get_aws_region() -> str:
     """Get the current AWS region using boto3"""
     session = boto3.Session()
-    return session.region_name or "us-east-1"
+    return session.region_name
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
