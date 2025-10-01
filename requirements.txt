@@ -1,5 +1,0 @@
-mcp
-boto3
-bedrock-agentcore
-bedrock-agentcore-starter-toolkit
-run-mcp-servers-with-aws-lambda
